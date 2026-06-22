@@ -486,12 +486,13 @@ class GitVersionCheckPluginTests {
 
     fun setupProjectWithGitRepo(
         version: String,
+        branch: String = "main",
         additionalSetup: (GradleProject.() -> Unit)? = null,
     ): Git {
       setupProject(version)
       additionalSetup?.invoke(this)
 
-      val git = Git.init().setDirectory(projectDir.toFile()).setInitialBranch("main").call()
+      val git = Git.init().setDirectory(projectDir.toFile()).setInitialBranch(branch).call()
       git.add()
           .addFilepatterns(
               *projectDir.listDirectoryEntries().map { it.fileName.toString() }.toTypedArray()

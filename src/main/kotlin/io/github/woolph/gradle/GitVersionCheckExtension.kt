@@ -29,6 +29,10 @@ abstract class GitVersionCheckExtension @Inject constructor(project: Project) {
 
   val unconventionalCommitBump = project.objects.property<UpdateType>()
 
+  val prereleaseBranch = project.objects.property<String>()
+
+  val prereleaseSuffix = project.objects.property<String>()
+
   /**
    * if set to true (default), the checkGitVersion also checks if the working tree is clean,
    * otherwise this check is skipped. This checks for a Gradle property `allowDirtyWorkingTree`. So,
