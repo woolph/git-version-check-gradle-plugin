@@ -1,0 +1,17 @@
+[versions]
+jvmTarget = "17"
+junit = "6.1.0"
+
+[libraries]
+jgit = "org.eclipse.jgit:org.eclipse.jgit:7.7.0.202606012155-r"
+semver4j = "org.semver4j:semver4j:6.0.0"
+
+test-junit-bom = { module = "org.junit:junit-bom", version.ref = "junit" }
+test-junit-engine = { module = "org.junit.jupiter:junit-jupiter-engine" }
+test-junit-params = { module = "org.junit.jupiter:junit-jupiter-params" }
+test-junit-launcher = { module = "org.junit.platform:junit-platform-launcher" }
+
+[plugins]
+pluginPublish = "com.gradle.plugin-publish:2.1.1"
+spotless = "com.diffplug.spotless:8.7.0"
+detekt = "dev.detekt:2.0.0-alpha.5"
