@@ -41,11 +41,17 @@ class GitVersionCheckPlugin : Plugin<Project> {
           }
 
       val checkGitVersion =
-          tasks.register<GitVersionCheckTask>("checkGitVersion")  {
+          tasks.register<GitVersionCheckTask>("checkGitVersion") {
             dependsOn(checkGitCleanIfRequired)
 
             gitDirectory.set(gitVersionCheckExtension.gitDirectory)
             gitDirectory.disallowChanges()
+
+            prereleaseBranch.set(gitVersionCheckExtension.prereleaseBranch)
+            prereleaseBranch.disallowChanges()
+
+            prereleaseSuffix.set(gitVersionCheckExtension.prereleaseSuffix)
+            prereleaseSuffix.disallowChanges()
 
             squashMergeTarget.set(
                 project.providers
@@ -60,9 +66,12 @@ class GitVersionCheckPlugin : Plugin<Project> {
             )
             squashMergeTarget.disallowChanges()
 
-            unconventionalCommitBump.set(project.providers
-              .gradleProperty("gitVersionCheck.unconventionalCommitBump")
-              .map(UpdateType::of).orElse(gitVersionCheckExtension.unconventionalCommitBump))
+            unconventionalCommitBump.set(
+                project.providers
+                    .gradleProperty("gitVersionCheck.unconventionalCommitBump")
+                    .map(UpdateType::of)
+                    .orElse(gitVersionCheckExtension.unconventionalCommitBump)
+            )
             unconventionalCommitBump.disallowChanges()
           }
 

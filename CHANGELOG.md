@@ -7,4 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased/Upcoming
 
+## [0.2.0]
+
+### Added
+- feature for supporting prerelease versions built from a configurable "dev" branch
+
 ## [0.1.0]

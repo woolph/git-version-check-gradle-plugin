@@ -11,7 +11,7 @@ plugins {
 
 group = "io.github.woolph.git-version-check"
 
-version = "0.1.0"
+version = "0.2.0"
 
 gradlePlugin {
   website.set("https://github.com/woolph/git-version-check-gradle-plugin")

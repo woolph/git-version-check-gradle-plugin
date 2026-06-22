@@ -62,6 +62,9 @@ abstract class GitVersionCheckTask : DefaultTask(), GitRepoAware {
   /** determines the prerelease branch (if the current branch is the prerelease branch) */
   @get:Input @get:Optional abstract val prereleaseBranch: Property<String>
 
+  /** overrides the prerelease suffix; defaults to the branch name when unset */
+  @get:Input @get:Optional abstract val prereleaseSuffix: Property<String>
+
   /**
    * determine how the determined version is bumped if the worktree is dirty (by default we assume
    * the worst case, can be overridden via property e.g. `-PdirtyBump=MINOR`)
@@ -104,10 +107,8 @@ abstract class GitVersionCheckTask : DefaultTask(), GitRepoAware {
     dirtyWorktreePrereleaseSuffix.convention(
         project.providers.gradleProperty("dirtySuffix").orElse("SNAPSHOT")
     )
+    prereleaseSuffix.convention(prereleaseBranch)
   }
-
-  // TODO add feature to treat a branch like `dev` as a prerelease branch (commits there are also
-  // squash in terms of version bumps)
 
   @TaskAction
   fun checkGitVersion() {
@@ -147,9 +148,15 @@ abstract class GitVersionCheckTask : DefaultTask(), GitRepoAware {
             requireConventionalCommits(commitsOrdered)
           }
 
-          val commitsSplitResult = splitIntoSquashMerge(git, commitsOrdered)
+          val onPrereleaseBranch =
+              prereleaseBranch.orNull?.let { it == git.repository.branch } ?: false
 
-          val determinedVersion = commitsSplitResult.bumpVersion(startingVersion)
+          val determinedVersion =
+              if (onPrereleaseBranch) {
+                computePrereleaseBranchVersion(commitsOrdered, startingVersion)
+              } else {
+                splitIntoSquashMerge(git, commitsOrdered).bumpVersion(startingVersion)
+              }
 
           if (!git.status().call().isClean) {
             val dirtyDeterminedVersion = bumpDirty(determinedVersion)
@@ -274,6 +281,22 @@ abstract class GitVersionCheckTask : DefaultTask(), GitRepoAware {
           .bump(
               commits.map(::updateTypeFrom).fold(startingVersion, UpdateType::foldVersion),
           )
+
+  /**
+   * Folds all commits to the severest bump type. Returns the bumped version paired with the RC
+   * index (commits after the first severest commit), or null when no version bump is needed.
+   */
+  internal fun computePrereleaseBranchVersion(
+      commits: List<RevCommit>,
+      startingVersion: Semver,
+  ): Semver {
+    val foldedType = commits.map(::updateTypeFrom).fold(UpdateType.NOTHING, UpdateType::fold)
+    if (foldedType == UpdateType.NOTHING) return startingVersion
+
+    val firstSeverestIdx = commits.indexOfFirst { updateTypeFrom(it) == foldedType }
+    val rcIndex = commits.size - firstSeverestIdx - 1
+    return foldedType.bump(startingVersion).withPreRelease("${prereleaseSuffix.get()}.$rcIndex")
+  }
 
   internal fun updateTypeFrom(revCommit: RevCommit): UpdateType =
       UpdateType.from(revCommit, unconventionalCommitBump.orNull ?: UpdateType.NOTHING)
