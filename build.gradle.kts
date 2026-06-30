@@ -11,7 +11,7 @@ plugins {
 
 group = "io.github.woolph.git-version-check"
 
-version = "0.1.0"
+version = "0.1.1"
 
 gradlePlugin {
   website.set("https://github.com/woolph/git-version-check-gradle-plugin")
@@ -25,9 +25,9 @@ gradlePlugin {
           "Adds a verification task to check whether the version set in the project matches up with the supposed version according to the git commit history."
       tags.set(listOf("verification", "ci"))
 
-      compatibility { // extension added by the Compatibility plugin
+      compatibility {
         features {
-          configurationCache = true // or false if the feature isn't supported
+          configurationCache = true
         }
       }
     }
