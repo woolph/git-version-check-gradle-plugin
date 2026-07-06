@@ -7,11 +7,12 @@ plugins {
   alias(libs.plugins.pluginPublish)
   alias(libs.plugins.spotless)
   alias(libs.plugins.detekt)
+  alias(libs.plugins.gitVersionCheck)
 }
 
 group = "io.github.woolph.git-version-check"
 
-version = "0.1.1"
+version = "0.1.2"
 
 gradlePlugin {
   website.set("https://github.com/woolph/git-version-check-gradle-plugin")
@@ -49,6 +50,7 @@ dependencies {
   testImplementation(libs.test.junit.params)
   testRuntimeOnly(libs.test.junit.engine)
   testRuntimeOnly(libs.test.junit.launcher)
+  testImplementation(libs.test.mockk)
   // endregion
 }
 

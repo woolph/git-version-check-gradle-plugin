@@ -24,6 +24,11 @@ enum class ConventionalCommitType(
   Build,
   /** Changes to our CI configuration files and scripts */
   CI,
+  /**
+   * Commits that affect operational aspects like infrastructure (IaC), deployment scripts, CI/CD
+   * pipelines, backups, monitoring, or recovery procedures, ...
+   */
+  Ops,
   /** Documentation only changes */
   Docs,
   /** A new feature */
@@ -41,6 +46,8 @@ enum class ConventionalCommitType(
   Style,
   /** Adding missing tests or correcting existing tests */
   Test,
+  /** Commits that represent tasks like initial commit, modifying .gitignore, ... */
+  Chore,
   ;
 
   companion object {
