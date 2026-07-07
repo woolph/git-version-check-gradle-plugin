@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased/Upcoming
 
+## [0.1.5] - 2026-07-07
+
+### Added
+- possibility to ignore merge commits with more than one parent when checking for conventional commits, 
+  as these are usually not relevant for versioning (active by default)
+
 ## [0.1.4] - 2026-07-07
 
 ### Changed

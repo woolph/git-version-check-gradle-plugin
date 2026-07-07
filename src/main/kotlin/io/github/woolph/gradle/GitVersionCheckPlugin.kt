@@ -67,6 +67,9 @@ class GitVersionCheckPlugin : Plugin<Project> {
                     .orElse(gitVersionCheckExtension.unconventionalCommitBump)
             )
             unconventionalCommitBump.disallowChanges()
+
+            ignoreMergeCommits.set(gitVersionCheckExtension.ignoreMergeCommits)
+            ignoreMergeCommits.disallowChanges()
           }
 
       tasks.register<PrintVersionTask>("printVersion")

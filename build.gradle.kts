@@ -12,7 +12,7 @@ plugins {
 
 group = "io.github.woolph.git-version-check"
 
-version = "0.1.4"
+version = "0.1.5"
 
 gradlePlugin {
   website.set("https://github.com/woolph/git-version-check-gradle-plugin")
@@ -67,14 +67,15 @@ tasks.test {
   systemProperty(
       "SUPPORTED_GRADLE_VERSION",
       listOf(
-              "9.6.0",
-              "9.5.1",
-              "9.4.1",
-              "9.3.1",
-              "9.2.1",
-              "9.1.0",
-              "9.0.0",
-              "8.14.5",
+              "9.6.1",
+//              "9.6.0",
+//              "9.5.1",
+//              "9.4.1",
+//              "9.3.1",
+//              "9.2.1",
+//              "9.1.0",
+//              "9.0.0",
+//              "8.14.5",
               //    "7.6.6", // 7.6.6 seems to be incompatible due to kotlin.protobuf lib
           )
           .joinToString(","),

@@ -30,6 +30,14 @@ abstract class GitVersionCheckExtension @Inject constructor(project: Project) {
   val unconventionalCommitBump = project.objects.property<UpdateType>()
 
   /**
+   * if set to true (default), merge commits (commits with more than one parent) are ignored during
+   * version determination. Their commit messages (e.g. Azure DevOps' "Merged PR 123: ...") usually
+   * do not adhere to conventional commits, and skipping them loses no version information since the
+   * merged commits themselves are part of the commit walk.
+   */
+  val ignoreMergeCommits = project.objects.property<Boolean>().convention(true)
+
+  /**
    * if set to true (default), the checkGitVersion also checks if the working tree is clean,
    * otherwise this check is skipped. This checks for a Gradle property `allowDirtyWorkingTree`. So,
    * you can overrule the default by passing the following argument

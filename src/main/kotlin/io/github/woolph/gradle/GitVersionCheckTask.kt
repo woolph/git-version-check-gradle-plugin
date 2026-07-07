@@ -62,6 +62,12 @@ abstract class GitVersionCheckTask : DefaultTask(), GitRepoAware {
   @get:Input @get:Optional abstract val prereleaseBranch: Property<String>
 
   /**
+   * if set to true (default), merge commits (commits with more than one parent) do not contribute
+   * to the version determination and are not checked against the conventional commit format
+   */
+  @get:Input abstract val ignoreMergeCommits: Property<Boolean>
+
+  /**
    * determine how the determined version is bumped if the worktree is dirty (by default we assume
    * the worst case, can be overridden via property e.g. `-PdirtyBump=MINOR`)
    */
@@ -91,6 +97,7 @@ abstract class GitVersionCheckTask : DefaultTask(), GitRepoAware {
     baselineTagPattern.convention("v*")
     gitDirectory.convention(project.layout.projectDirectory.dir(".git"))
     baselineTagConsiderUnannotated.convention(false)
+    ignoreMergeCommits.convention(true)
 
     dirtyWorktreeUpdateType.convention(
         project.providers
@@ -276,14 +283,17 @@ abstract class GitVersionCheckTask : DefaultTask(), GitRepoAware {
           )
 
   internal fun updateTypeFrom(revCommit: RevCommit): UpdateType =
-      when (val parseResult = ConventionalCommitType.parseConventionalCommitType(revCommit)) {
-        is ConventionalCommitType.ParseSuccess -> parseResult.updateType
-        is ConventionalCommitType.ParseError ->
-            unconventionalCommitBump.orNull
-                ?: throw VerificationException(
-                    "commit ${revCommit.name} does not adhere to conventional commits: $parseResult"
-                )
-      }
+      if (ignoreMergeCommits.get() && revCommit.parentCount > 1) {
+        UpdateType.NOTHING
+      } else
+          when (val parseResult = ConventionalCommitType.parseConventionalCommitType(revCommit)) {
+            is ConventionalCommitType.ParseSuccess -> parseResult.updateType
+            is ConventionalCommitType.ParseError ->
+                unconventionalCommitBump.orNull
+                    ?: throw VerificationException(
+                        "commit ${revCommit.name} does not adhere to conventional commits: $parseResult"
+                    )
+          }
 
   internal fun <T : Any> Provider<T>.onPresent(block: (T) -> Unit): Provider<T> = apply {
     if (isPresent) block(get())

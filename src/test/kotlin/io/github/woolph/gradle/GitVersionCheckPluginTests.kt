@@ -17,13 +17,8 @@
 // SPDX-License-Identifier: Apache-2.0
 package io.github.woolph.gradle
 
-import java.nio.file.Path
-import kotlin.io.path.appendText
-import kotlin.io.path.createDirectories
-import kotlin.io.path.createTempDirectory
-import kotlin.io.path.listDirectoryEntries
-import kotlin.io.path.writeText
 import org.eclipse.jgit.api.Git
+import org.eclipse.jgit.api.MergeCommand
 import org.eclipse.jgit.lib.PersonIdent
 import org.gradle.testkit.runner.GradleRunner
 import org.gradle.testkit.runner.TaskOutcome
@@ -31,6 +26,12 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.DynamicTest
 import org.junit.jupiter.api.TestFactory
+import java.nio.file.Path
+import kotlin.io.path.appendText
+import kotlin.io.path.createDirectories
+import kotlin.io.path.createTempDirectory
+import kotlin.io.path.listDirectoryEntries
+import kotlin.io.path.writeText
 
 class GitVersionCheckPluginTests {
   @TestFactory
@@ -254,6 +255,68 @@ class GitVersionCheckPluginTests {
       }
 
   @TestFactory
+  fun `repo with feat commit and merge commit on top succeeds`() =
+      runTestWithGradleRunner(
+          setup = {
+            val git = setupProjectWithGitRepo("0.2.0")
+
+            projectDir.resolve("new.txt").writeText("test content\n")
+
+            git.checkout().setCreateBranch(true).setName("feat/new-feature").call()
+            git.add().addFilepatterns("new.txt").call()
+            git.commit()
+              .setMessage("feat: new feature xyz")
+              .setAuthor(PersonIdent("Your Name", "your.email@example.com"))
+              .call()
+            git.checkout().setName("main").call()
+            git.merge().include(git.repository.resolve("feat/new-feature"))
+              .setFastForward(MergeCommand.FastForwardMode.NO_FF)
+              .setMessage("Merge branch 'feat/new-feature'").call()
+          }
+      ) {
+        val result = gradleRunner.withArguments("check").build()
+
+        assertEquals(TaskOutcome.SUCCESS, result.task(":checkGitCleanIfRequired")?.outcome)
+        assertEquals(TaskOutcome.SUCCESS, result.task(":checkGitVersion")?.outcome)
+        assertEquals(TaskOutcome.SUCCESS, result.task(":check")?.outcome)
+      }
+
+  @TestFactory
+  fun `repo with feat commit and merge commit on top with disabled merge commit ignore fails`() =
+      runTestWithGradleRunner(
+          setup = {
+            val git = setupProjectWithGitRepo("0.2.0") {
+              buildFile.appendText(
+                """
+                gitVersionCheck {
+                  ignoreMergeCommits = false
+                }
+                
+                """.trimIndent()
+              )
+            }
+
+            projectDir.resolve("new.txt").writeText("test content\n")
+
+            git.checkout().setCreateBranch(true).setName("feat/new-feature").call()
+            git.add().addFilepatterns("new.txt").call()
+            git.commit()
+                .setMessage("feat: new feature xyz")
+                .setAuthor(PersonIdent("Your Name", "your.email@example.com"))
+                .call()
+            git.checkout().setName("main").call()
+            git.merge().include(git.repository.resolve("feat/new-feature"))
+              .setFastForward(MergeCommand.FastForwardMode.NO_FF)
+              .setMessage("Merge branch 'feat/new-feature'").call()
+          }
+      ) {
+        val result = gradleRunner.withArguments("check").buildAndFail()
+
+        assertEquals(TaskOutcome.SUCCESS, result.task(":checkGitCleanIfRequired")?.outcome)
+        assertEquals(TaskOutcome.FAILED, result.task(":checkGitVersion")?.outcome)
+      }
+
+  @TestFactory
   fun `clean simple repo with breaking change x commit succeeds`() =
       runTestWithGradleRunner(
           setup = {
@@ -331,10 +394,10 @@ class GitVersionCheckPluginTests {
                 setupProjectWithGitRepo("0.2.0") {
                   buildFile.appendText(
                       """
-
                       gitVersionCheck {
                         unconventionalCommitBump = io.github.woolph.gradle.UpdateType.MAJOR
                       }
+                      
                       """
                           .trimIndent()
                   )
@@ -502,7 +565,9 @@ class GitVersionCheckPluginTests {
           .setAuthor(PersonIdent("Your Name", "your.email@example.com"))
           .call()
 
-      return git
+      return git.also {
+        println("projectDir=$projectDir")
+      }
     }
 
     fun setupProject(version: String) {
@@ -522,6 +587,7 @@ class GitVersionCheckPluginTests {
         }
 
         version = "$version"
+        
         """
               .trimIndent(),
       )

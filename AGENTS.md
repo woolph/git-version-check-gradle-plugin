@@ -10,7 +10,7 @@ semantic version bump rules.
 
 Plugin ID: `io.github.woolph.git-version-check`  
 Group: `io.github.woolph.git-version-check`  
-Current version: `0.1.0`
+Current version: `0.1.5`
 
 ## Common Commands
 
