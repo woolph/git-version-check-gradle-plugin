@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased/Upcoming
 
+## [0.1.4] - 2026-07-07
+
+### Changed
+- `printVersion` task now prints with logger.lifecycle instead of println
+
 ## [0.1.3] - 2026-07-07
 
 ### Added
