@@ -17,7 +17,6 @@
 // SPDX-License-Identifier: Apache-2.0
 package io.github.woolph.gradle
 
-import org.eclipse.jgit.revwalk.RevCommit
 import org.semver4j.Semver
 
 enum class UpdateType {
@@ -42,31 +41,5 @@ enum class UpdateType {
     fun foldVersion(version: Semver, updateType: UpdateType): Semver = updateType.bump(version)
 
     fun of(value: String) = UpdateType.valueOf(value.uppercase())
-
-    fun from(revCommit: RevCommit, elseBranchUpdateType: UpdateType): UpdateType =
-        when {
-          MAJOR_PATTERN.containsMatchIn(revCommit.firstMessageLine) ||
-              revCommit.fullMessage.lineSequence().any { it.startsWith("BREAKING CHANGE:") } ->
-              MAJOR
-          MINOR_PATTERN.containsMatchIn(revCommit.firstMessageLine) -> MINOR
-          PATCH_PATTERN.containsMatchIn(revCommit.firstMessageLine) -> PATCH
-          else -> elseBranchUpdateType
-        }
-
-    private val MAJOR_PATTERN =
-        Regex(
-            "^(${ConventionalCommitType.entries
-              .joinToString("|") { it.name.lowercase() }})(\\(\\w+\\))?!:"
-        )
-    private val MINOR_PATTERN =
-        Regex(
-            "^(${ConventionalCommitType.entries.filter { it.updateType == MINOR }
-              .joinToString("|") { it.name.lowercase() }})(\\(\\w+\\))?:"
-        )
-    private val PATCH_PATTERN =
-        Regex(
-            "^(${ConventionalCommitType.entries.filter { it.updateType == PATCH }
-              .joinToString("|") { it.name.lowercase() }})(\\(\\w+\\))?:"
-        )
   }
 }

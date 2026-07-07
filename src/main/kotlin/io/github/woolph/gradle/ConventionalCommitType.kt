@@ -17,6 +17,8 @@
 // SPDX-License-Identifier: Apache-2.0
 package io.github.woolph.gradle
 
+import org.eclipse.jgit.revwalk.RevCommit
+
 enum class ConventionalCommitType(
     val updateType: UpdateType = UpdateType.NOTHING,
 ) {
@@ -51,11 +53,62 @@ enum class ConventionalCommitType(
   ;
 
   companion object {
-    val CHECK_CONVENTIONAL_COMMIT =
-        Regex(
-            "^(${
-      ConventionalCommitType.entries.joinToString("|") { it.name.lowercase() }
-    })(\\(\\w+\\))?!?:"
-        )
+    internal fun parseConventionalCommitType(revCommit: RevCommit): ParseResult =
+        when (val matchResult = CHECK_CONVENTIONAL_COMMIT.find(revCommit.firstMessageLine)) {
+          null ->
+              ParseError(
+                  "message did not match pattern $CHECK_CONVENTIONAL_COMMIT",
+                  revCommit.fullMessage,
+              )
+          else -> {
+            val commitTypeString = matchResult.groups[1]!!.value
+            val isBreakingChange = matchResult.groups[3]?.value == "!"
+
+            if (
+                !isBreakingChange &&
+                    revCommit.fullMessage.lines().any { it.startsWith(BREAKING_CHANGE_FOOTER_KEY) }
+            )
+                ParseError(
+                    "message contained 'BREAKING CHANGE' line, " +
+                        "but didn't indicate that it contains breaking changes in the first line of the message",
+                    revCommit.fullMessage,
+                )
+            else
+                when (
+                    val commitType =
+                        ConventionalCommitType.entries.firstOrNull {
+                          it.name.equals(commitTypeString, ignoreCase = true)
+                        }
+                ) {
+                  null ->
+                      ParseError("message contained a unknown commit type", revCommit.fullMessage)
+                  else -> ParseSuccess(commitType, isBreakingChange)
+                }
+          }
+        }
+
+    internal const val BREAKING_CHANGE_FOOTER_KEY: String = "BREAKING CHANGE:"
+
+    internal val CHECK_CONVENTIONAL_COMMIT = Regex("^(\\w+)(\\(\\w+\\))?(!)?:")
+  }
+
+  sealed interface ParseResult
+
+  data class ParseSuccess(
+      val conventionalCommitType: ConventionalCommitType,
+      val isBreakingChange: Boolean,
+  ) : ParseResult {
+    val updateType: UpdateType
+      get() =
+          if (isBreakingChange) {
+            UpdateType.MAJOR
+          } else {
+            conventionalCommitType.updateType
+          }
+  }
+
+  data class ParseError(val reason: String, val fullMessage: String) : ParseResult {
+    override fun toString(): String =
+        "${reason}\ncommitMessage: |\n  ${fullMessage.lines().joinToString("  \n")}\n"
   }
 }

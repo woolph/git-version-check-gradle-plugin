@@ -17,7 +17,6 @@
 // SPDX-License-Identifier: Apache-2.0
 package io.github.woolph.gradle
 
-import io.github.woolph.gradle.ConventionalCommitType.Companion.CHECK_CONVENTIONAL_COMMIT
 import kotlin.use
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.api.errors.GitAPIException
@@ -143,10 +142,6 @@ abstract class GitVersionCheckTask : DefaultTask(), GitRepoAware {
 
           val commitsOrdered = commits.reversed().drop(1)
 
-          if (!unconventionalCommitBump.isPresent) {
-            requireConventionalCommits(commitsOrdered)
-          }
-
           val commitsSplitResult = splitIntoSquashMerge(git, commitsOrdered)
 
           val determinedVersion = commitsSplitResult.bumpVersion(startingVersion)
@@ -155,7 +150,7 @@ abstract class GitVersionCheckTask : DefaultTask(), GitRepoAware {
             val dirtyDeterminedVersion = bumpDirty(determinedVersion)
             if (dirtyDeterminedVersion != determinedVersion) {
               logger.warn(
-                  "Worktree is dirty! determinedVersion $determinedVersion -> $dirtyDeterminedVersion"
+                  "Worktree is dirty! determinedVersion $determinedVersion => $dirtyDeterminedVersion"
               )
             }
             projectVersion to dirtyDeterminedVersion
@@ -172,9 +167,9 @@ abstract class GitVersionCheckTask : DefaultTask(), GitRepoAware {
       throw VerificationException(message)
     } else {
       logger.debug(
-        "Git version check passed for project.version = \"{}\", determinedGitVersion = \"{}\"",
-        projectVersion,
-        determinedGitVersion,
+          "Git version check passed for project.version = \"{}\", determinedGitVersion = \"{}\"",
+          projectVersion,
+          determinedGitVersion,
       )
     }
   }
@@ -276,15 +271,14 @@ abstract class GitVersionCheckTask : DefaultTask(), GitRepoAware {
           )
 
   internal fun updateTypeFrom(revCommit: RevCommit): UpdateType =
-      UpdateType.from(revCommit, unconventionalCommitBump.orNull ?: UpdateType.NOTHING)
-
-  /** @throws VerificationException if commits do not adhere to conventional commits spec */
-  internal fun requireConventionalCommits(commits: List<RevCommit>) {
-    commits.onEach {
-      if (!CHECK_CONVENTIONAL_COMMIT.containsMatchIn(it.firstMessageLine))
-          throw VerificationException("commit $it does not adhere to conventional commits")
-    }
-  }
+      when (val parseResult = ConventionalCommitType.parseConventionalCommitType(revCommit)) {
+        is ConventionalCommitType.ParseSuccess -> parseResult.updateType
+        is ConventionalCommitType.ParseError ->
+            unconventionalCommitBump.orNull
+                ?: throw VerificationException(
+                    "commit ${revCommit.name} does not adhere to conventional commits: $parseResult"
+                )
+      }
 
   internal fun <T : Any> Provider<T>.onPresent(block: (T) -> Unit): Provider<T> = apply {
     if (isPresent) block(get())
