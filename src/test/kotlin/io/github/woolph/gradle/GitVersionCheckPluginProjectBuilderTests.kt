@@ -83,10 +83,7 @@ class GitVersionCheckPluginProjectBuilderTests {
     val checkGitVersion = project.tasks.getByName("checkGitVersion")
 
     val dependencyNames =
-      checkGitVersion.taskDependencies
-            .getDependencies(checkGitVersion)
-            .map(Task::getName)
-            .toSet()
+        checkGitVersion.taskDependencies.getDependencies(checkGitVersion).map(Task::getName).toSet()
 
     assertTrue(
         dependencyNames.contains("checkGitCleanIfRequired"),
@@ -99,14 +96,11 @@ class GitVersionCheckPluginProjectBuilderTests {
     val printVersion = project.tasks.getByName("printVersion")
 
     val dependencyNames =
-      printVersion.taskDependencies
-        .getDependencies(printVersion)
-        .map(Task::getName)
-        .toSet()
+        printVersion.taskDependencies.getDependencies(printVersion).map(Task::getName).toSet()
 
     assertTrue(
-      dependencyNames.contains("checkGitVersion"),
-      "printVersion should depend on checkGitVersion, but depends on $dependencyNames",
+        dependencyNames.isEmpty(),
+        "printVersion should depend on any other task, but depends on $dependencyNames",
     )
   }
 
@@ -115,7 +109,10 @@ class GitVersionCheckPluginProjectBuilderTests {
     val gitVersionCheck =
         project.extensions.getByName("gitVersionCheck") as GitVersionCheckExtension
 
-    assertEquals(project.layout.projectDirectory.file(".git").asFile, gitVersionCheck.gitDirectory.get().asFile)
+    assertEquals(
+        project.layout.projectDirectory.file(".git").asFile,
+        gitVersionCheck.gitDirectory.get().asFile,
+    )
     assertEquals("main", gitVersionCheck.mainBranch.get())
     assertTrue(gitVersionCheck.isCleanWorkingTreeRequired.get())
   }

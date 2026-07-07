@@ -14,7 +14,7 @@ Add the plugin to your Gradle build:
 
 ```kotlin
 plugins {
-  id("io.github.woolph.git-version-check") version "0.1.2"
+  id("io.github.woolph.git-version-check") version "0.1.3"
 }
 ```
 
@@ -29,6 +29,7 @@ check
 └── checkGitVersion             (determines the version by scanning the commit history and checks whether the project.version aligns with that)
     └── checkGitCleanIfRequired (checks whether the git worktree is clean if a dirty worktree is disallow, which is the case by default)
 checkGitClean                   (checks whether the git worktree is clean)
+printVersion                    (prints the currently set verison)
 ```
 
 ## Configuration
@@ -51,7 +52,9 @@ gitVersionCheck {
 By default, the supported commit types are:
 
 * **build**: Changes that affect the build system or external dependencies (example scopes: gulp, broccoli, npm)
-* **ci**: Changes to our CI configuration files and scripts (example scopes: Travis, Circle, BrowserStack, SauceLabs)
+* **ci**: Changes to our CI configuration files and scripts
+* **ops**: Commits that affect operational aspects like infrastructure (IaC), deployment scripts, CI/CD pipelines,
+  backups, monitoring, or recovery procedures, ...
 * **docs**: Documentation only changes
 * **feat**: A new feature
 * **fix**: A bug fix
@@ -59,6 +62,7 @@ By default, the supported commit types are:
 * **refactor**: A code change that neither fixes a bug nor adds a feature
 * **style**: Changes that do not affect the meaning of the code (white-space, formatting, missing semi-colons, etc)
 * **test**: Adding missing tests or correcting existing tests
+* **chore**: Commits that represent tasks like initial commit, modifying .gitignore, ...
 
 > [!NOTE]
 > If your git history contains legacy commits where the commit message does not adhere to the conventional commits spec,

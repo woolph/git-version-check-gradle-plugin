@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased/Upcoming
 
+## [0.1.3] - 2026-07-07
+
+### Added
+- check to ensure that the git worktree is not a shallow clone, as this would break the version check
+
+### Changed
+- `printVersion` task now no longer depends on `checkGitVersion`
+- improved logging for better diagnostics
+
 ## [0.1.2] - 2026-07-06
 
 ### Added

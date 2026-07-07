@@ -112,6 +112,8 @@ abstract class GitVersionCheckTask : DefaultTask(), GitRepoAware {
   fun checkGitVersion() {
     val (projectVersion, determinedGitVersion) =
         useGitRepo { git ->
+          checkNotShallowClone(git)
+
           val projectVersion = Semver(version)
           val initialVersion =
               initialVersion.map(::Semver).map {
@@ -126,7 +128,7 @@ abstract class GitVersionCheckTask : DefaultTask(), GitRepoAware {
 
           val latestTag =
               determineBaselineTag(git).onPresent { (version, commit) ->
-                logger.info("baseline tag found: $version => ${commit.id}")
+                logger.info("Baseline tag found: version $version @ ${commit.name}")
               }
 
           val baselineCommit = determineBaselineCommit(git, initialVersion)
@@ -233,12 +235,15 @@ abstract class GitVersionCheckTask : DefaultTask(), GitRepoAware {
   ): Provider<Pair<Semver, ObjectId>> =
       baselineCommit.zip(initialVersion) { commit, version ->
         try {
-          version to
-              (git.repository.resolve(commit)
-                  ?: throw InvalidUserDataException("baselineCommit '$commit' does not exist"))
-        } catch (e: GitAPIException) {
-          throw GradleException("baselineCommit '$commit' cannot be resolved", e)
-        }
+              version to
+                  (git.repository.resolve(commit)
+                      ?: throw InvalidUserDataException("Baseline commit '$commit' does not exist"))
+            } catch (e: GitAPIException) {
+              throw GradleException("Baseline commit '$commit' cannot be resolved", e)
+            }
+            .also { (version, commit) ->
+              logger.info("Baseline commit found: version $version @ ${commit.name}")
+            }
       }
 
   internal fun splitIntoSquashMerge(git: Git, commits: List<RevCommit>): SplitResult =
@@ -282,5 +287,16 @@ abstract class GitVersionCheckTask : DefaultTask(), GitRepoAware {
 
   internal fun <T : Any> Provider<T>.onPresent(block: (T) -> Unit): Provider<T> = apply {
     if (isPresent) block(get())
+  }
+
+  private fun checkNotShallowClone(git: Git) {
+    val shallowFile = git.repository.directory.resolve("shallow")
+    if (shallowFile.exists() && shallowFile.length() > 0L) {
+      throw InvalidUserDataException(
+          "Git repository is a shallow clone — git-version-check requires full commit history " +
+              "and tags to determine the version correctly. In Azure DevOps pipelines, add " +
+              "`fetchDepth: 0` and `fetchTags: true` to your checkout step."
+      )
+    }
   }
 }
