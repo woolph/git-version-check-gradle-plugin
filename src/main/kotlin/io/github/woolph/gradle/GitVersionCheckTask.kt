@@ -126,7 +126,7 @@ abstract class GitVersionCheckTask : DefaultTask(), GitRepoAware {
 
           val latestTag =
               determineBaselineTag(git).onPresent { (version, commit) ->
-                logger.info("baseline tag found: $version => ${commit.id}")
+                logger.info("Baseline tag found: version $version @ ${commit.name}")
               }
 
           val baselineCommit = determineBaselineCommit(git, initialVersion)
@@ -233,12 +233,15 @@ abstract class GitVersionCheckTask : DefaultTask(), GitRepoAware {
   ): Provider<Pair<Semver, ObjectId>> =
       baselineCommit.zip(initialVersion) { commit, version ->
         try {
-          version to
-              (git.repository.resolve(commit)
-                  ?: throw InvalidUserDataException("baselineCommit '$commit' does not exist"))
-        } catch (e: GitAPIException) {
-          throw GradleException("baselineCommit '$commit' cannot be resolved", e)
-        }
+              version to
+                  (git.repository.resolve(commit)
+                      ?: throw InvalidUserDataException("Baseline commit '$commit' does not exist"))
+            } catch (e: GitAPIException) {
+              throw GradleException("Baseline commit '$commit' cannot be resolved", e)
+            }
+            .also { (version, commit) ->
+              logger.info("Baseline commit found: version $version @ ${commit.name}")
+            }
       }
 
   internal fun splitIntoSquashMerge(git: Git, commits: List<RevCommit>): SplitResult =
