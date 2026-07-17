@@ -40,6 +40,6 @@ abstract class PrintVersionTask : DefaultTask() {
 
   @TaskAction
   fun printVersion() {
-    logger.lifecycle(versionFormatter.map { it.format(version) }.get())
+    println(versionFormatter.map { it.format(version) }.get())
   }
 }
