@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+@@MARKER@@
+#
+# Runs `./gradlew checkGitVersion` before pushing so that project.version matches the version
+# derived from the commit history. Does nothing if the repository has no gradle wrapper or the
+# io.github.woolph.git-version-check plugin is not applied.
+#
+# Installed by the gradle task `installGitHooks`; re-running that task updates this file.
+
+MAIN_BRANCH="@@MAIN_BRANCH@@"
+
+if ! [[ -x "./gradlew" ]]; then
+  exit 0
+fi
+
+if ! ./gradlew -q help --task checkGitVersion >/dev/null 2>&1; then
+  exit 0
+fi
+
+# uncommitted local changes must not distort the check of the commits being pushed
+ARGS=(checkGitVersion -PallowDirtyWorkingTree -PdirtyBump=NOTHING -PdirtySuffix=)
+
+CURRENT_BRANCH=$(git symbolic-ref -q --short HEAD)
+if [[ -n "$CURRENT_BRANCH" && "$CURRENT_BRANCH" != "$MAIN_BRANCH" ]] \
+  && git rev-parse -q --verify "refs/remotes/origin/$MAIN_BRANCH" >/dev/null 2>&1; then
+  # feature branches are squash merged onto the main branch, so all commits since the
+  # main branch count as one single version bump
+  ARGS+=(-PsquashMerge)
+fi
+
+echo "[git hook] executing gradle ${ARGS[*]} before push"
+exec ./gradlew "${ARGS[@]}"

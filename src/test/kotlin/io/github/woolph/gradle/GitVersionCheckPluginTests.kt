@@ -17,21 +17,27 @@
 // SPDX-License-Identifier: Apache-2.0
 package io.github.woolph.gradle
 
+import io.github.woolph.gradle.hooks.GitHookInstaller
+import io.github.woolph.gradle.hooks.GitHookTemplates
+import java.nio.file.Path
+import kotlin.io.path.appendText
+import kotlin.io.path.createDirectories
+import kotlin.io.path.createTempDirectory
+import kotlin.io.path.exists
+import kotlin.io.path.isExecutable
+import kotlin.io.path.listDirectoryEntries
+import kotlin.io.path.readText
+import kotlin.io.path.writeText
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.api.MergeCommand
 import org.eclipse.jgit.lib.PersonIdent
 import org.gradle.testkit.runner.GradleRunner
 import org.gradle.testkit.runner.TaskOutcome
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.DynamicTest
 import org.junit.jupiter.api.TestFactory
-import java.nio.file.Path
-import kotlin.io.path.appendText
-import kotlin.io.path.createDirectories
-import kotlin.io.path.createTempDirectory
-import kotlin.io.path.listDirectoryEntries
-import kotlin.io.path.writeText
 
 class GitVersionCheckPluginTests {
   @TestFactory
@@ -265,13 +271,15 @@ class GitVersionCheckPluginTests {
             git.checkout().setCreateBranch(true).setName("feat/new-feature").call()
             git.add().addFilepatterns("new.txt").call()
             git.commit()
-              .setMessage("feat: new feature xyz")
-              .setAuthor(PersonIdent("Your Name", "your.email@example.com"))
-              .call()
+                .setMessage("feat: new feature xyz")
+                .setAuthor(PersonIdent("Your Name", "your.email@example.com"))
+                .call()
             git.checkout().setName("main").call()
-            git.merge().include(git.repository.resolve("feat/new-feature"))
-              .setFastForward(MergeCommand.FastForwardMode.NO_FF)
-              .setMessage("Merge branch 'feat/new-feature'").call()
+            git.merge()
+                .include(git.repository.resolve("feat/new-feature"))
+                .setFastForward(MergeCommand.FastForwardMode.NO_FF)
+                .setMessage("Merge branch 'feat/new-feature'")
+                .call()
           }
       ) {
         val result = gradleRunner.withArguments("check").build()
@@ -285,16 +293,18 @@ class GitVersionCheckPluginTests {
   fun `repo with feat commit and merge commit on top with disabled merge commit ignore fails`() =
       runTestWithGradleRunner(
           setup = {
-            val git = setupProjectWithGitRepo("0.2.0") {
-              buildFile.appendText(
-                """
-                gitVersionCheck {
-                  ignoreMergeCommits = false
+            val git =
+                setupProjectWithGitRepo("0.2.0") {
+                  buildFile.appendText(
+                      """
+                      gitVersionCheck {
+                        ignoreMergeCommits = false
+                      }
+
+                      """
+                          .trimIndent()
+                  )
                 }
-                
-                """.trimIndent()
-              )
-            }
 
             projectDir.resolve("new.txt").writeText("test content\n")
 
@@ -305,9 +315,11 @@ class GitVersionCheckPluginTests {
                 .setAuthor(PersonIdent("Your Name", "your.email@example.com"))
                 .call()
             git.checkout().setName("main").call()
-            git.merge().include(git.repository.resolve("feat/new-feature"))
-              .setFastForward(MergeCommand.FastForwardMode.NO_FF)
-              .setMessage("Merge branch 'feat/new-feature'").call()
+            git.merge()
+                .include(git.repository.resolve("feat/new-feature"))
+                .setFastForward(MergeCommand.FastForwardMode.NO_FF)
+                .setMessage("Merge branch 'feat/new-feature'")
+                .call()
           }
       ) {
         val result = gradleRunner.withArguments("check").buildAndFail()
@@ -397,7 +409,7 @@ class GitVersionCheckPluginTests {
                       gitVersionCheck {
                         unconventionalCommitBump = io.github.woolph.gradle.UpdateType.MAJOR
                       }
-                      
+
                       """
                           .trimIndent()
                   )
@@ -507,7 +519,100 @@ class GitVersionCheckPluginTests {
 
   // TODO do more tests with baselineCommit & baselineTagPattern
 
+  // region installGitHooks
+
+  @TestFactory
+  fun `installGitHooks installs all hooks into the local repository`() =
+      runTestWithGradleRunner(
+          setup = {
+            setupProjectWithGitRepo("0.1.0")
+          }
+      ) {
+        val result = gradleRunner.withArguments("installGitHooks").build()
+
+        assertEquals(TaskOutcome.SUCCESS, result.task(":installGitHooks")?.outcome)
+        val hooksDir = projectDir.resolve(".git/hooks")
+        GitHookTemplates.HOOK_NAMES.forEach { hookName ->
+          val hook = hooksDir.resolve(hookName)
+          assertTrue(hook.exists(), "$hook should exist")
+          assertTrue(hook.isExecutable(), "$hook should be executable")
+          assertTrue(hook.readText().contains(GitHookInstaller.MARKER), "$hook should be managed")
+          assertTrue(result.output.contains(hookName), "output should mention $hookName")
+        }
+      }
+
+  @TestFactory
+  fun `installGitHooks leaves foreign hooks alone unless forced`() =
+      runTestWithGradleRunner(
+          setup = {
+            setupProjectWithGitRepo("0.1.0")
+            projectDir.resolve(".git/hooks").createDirectories()
+            projectDir.resolve(".git/hooks/commit-msg").writeText(FOREIGN_HOOK)
+          }
+      ) {
+        val commitMsg = projectDir.resolve(".git/hooks/commit-msg")
+
+        val result = gradleRunner.withArguments("installGitHooks").build()
+
+        assertEquals(TaskOutcome.SUCCESS, result.task(":installGitHooks")?.outcome)
+        assertEquals(FOREIGN_HOOK, commitMsg.readText(), "foreign hook must not be touched")
+        assertTrue(result.output.contains("skipped"), "output should report the skip")
+        assertTrue(
+            result.output.contains("gitVersionCheck.forceHookInstall"),
+            "output should hint at the force property",
+        )
+        assertTrue(projectDir.resolve(".git/hooks/pre-push").exists(), "other hooks are installed")
+
+        val forced =
+            gradleRunner
+                .withArguments("installGitHooks", "-PgitVersionCheck.forceHookInstall")
+                .build()
+
+        assertEquals(TaskOutcome.SUCCESS, forced.task(":installGitHooks")?.outcome)
+        assertTrue(commitMsg.readText().contains(GitHookInstaller.MARKER), "hook replaced")
+        val backups = projectDir.resolve(".git/hooks").listDirectoryEntries("commit-msg.backup-*")
+        assertEquals(1, backups.size, "exactly one backup expected, got $backups")
+        assertEquals(FOREIGN_HOOK, backups.single().readText())
+      }
+
+  @TestFactory
+  fun `installGitHooks installs into user global hooks directory and configures core hooksPath`() =
+      runTestWithGradleRunner(
+          setup = {
+            setupProjectWithGitRepo("0.1.0")
+          }
+      ) {
+        val fakeHome = createTempDirectory(TEMP_DIR_BASE)
+
+        val result =
+            gradleRunner
+                .withArguments(
+                    "installGitHooks",
+                    "-PgitVersionCheck.hookTarget=UserGlobal",
+                    "-Duser.home=$fakeHome",
+                )
+                .build()
+
+        assertEquals(TaskOutcome.SUCCESS, result.task(":installGitHooks")?.outcome)
+        GitHookTemplates.HOOK_NAMES.forEach { hookName ->
+          assertTrue(fakeHome.resolve(".git/hooks/$hookName").exists(), "$hookName in fake home")
+        }
+        assertFalse(
+            projectDir.resolve(".git/hooks/commit-msg").exists(),
+            "nothing installed locally",
+        )
+        val gitconfig = fakeHome.resolve(".gitconfig").readText()
+        assertTrue(
+            gitconfig.contains("hooksPath = ~/.git/hooks"),
+            "core.hooksPath set:\n$gitconfig",
+        )
+      }
+
+  // endregion
+
   companion object {
+    const val FOREIGN_HOOK = "#!/bin/sh\necho 'hook from somewhere else'\n"
+
     val SUPPORTED_GRADLE_VERSIONS = System.getProperty("SUPPORTED_GRADLE_VERSION").split(",")
 
     val TEMP_DIR_BASE =
@@ -561,7 +666,7 @@ class GitVersionCheckPluginTests {
           )
           .call()
       git.commit()
-          .setMessage("Initial commit")
+          .setMessage("chore: initial commit")
           .setAuthor(PersonIdent("Your Name", "your.email@example.com"))
           .call()
 

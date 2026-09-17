@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+@@MARKER@@
+#
+# Runs `./gradlew spotlessCheck` on the staged changes before committing.
+# Does nothing if the repository has no gradle wrapper or no spotlessCheck task.
+#
+# Installed by the gradle task `installGitHooks`; re-running that task updates this file.
+
+if ! [[ -x "./gradlew" ]]; then
+  exit 0
+fi
+
+if ! ./gradlew -q help --task spotlessCheck >/dev/null 2>&1; then
+  exit 0
+fi
+
+echo '[git hook] executing gradle spotlessCheck before commit'
+
+# stash unstaged changes so that only the staged content is checked;
+# `git stash push --keep-index` fails if there is nothing to stash (e.g. initial commit)
+STASHED=0
+if ! git diff --quiet; then
+  if git stash push -q --keep-index; then
+    STASHED=1
+  else
+    echo '[git hook] unable to stash unstaged changes' >&2
+    exit 1
+  fi
+fi
+
+cleanup() {
+  if [[ "$STASHED" -eq 1 ]]; then
+    git stash pop -q
+  fi
+}
+trap cleanup EXIT
+
+./gradlew spotlessCheck --daemon
+EXIT_CODE=$?
+
+if [[ $EXIT_CODE -ne 0 ]]; then
+  echo '[git hook] spotlessCheck failed, running spotlessApply; stage the result and commit again' >&2
+  ./gradlew spotlessApply --daemon
+fi
+
+exit $EXIT_CODE

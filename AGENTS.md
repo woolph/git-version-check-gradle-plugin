@@ -10,7 +10,7 @@ semantic version bump rules.
 
 Plugin ID: `io.github.woolph.git-version-check`  
 Group: `io.github.woolph.git-version-check`  
-Current version: `0.1.5`
+Current version: `0.2.0`
 
 ## Common Commands
 
@@ -43,14 +43,20 @@ The plugin follows the standard Gradle plugin pattern: **Extension → Plugin wi
 
 ### Core files
 
-| File                          | Role                                                                                              |
-|-------------------------------|---------------------------------------------------------------------------------------------------|
-| `GitVersionCheckPlugin.kt`    | Registers the extension and all tasks; wires `checkGitVersion` into `check`                       |
-| `GitVersionCheckExtension.kt` | DSL configuration block (`gitVersionCheck {}`)                                                    |
-| `GitVersionCheckTask.kt`      | Core logic: JGit commit walk → `UpdateType` → semver comparison                                   |
-| `GitCleanCheckTask.kt`        | Standalone task that fails if the worktree is dirty                                               |
-| `ConventionalCommitType.kt`   | Enum mapping commit type strings to their `UpdateType`                                            |
-| `UpdateType.kt`               | `NOTHING / PATCH / MINOR / MAJOR` enum with regex patterns for commit parsing and fold/bump logic |
+| File                                 | Role                                                                                              |
+|--------------------------------------|---------------------------------------------------------------------------------------------------|
+| `GitVersionCheckPlugin.kt`           | Registers the extension and all tasks; wires `checkGitVersion` into `check`                       |
+| `GitVersionCheckExtension.kt`        | DSL configuration block (`gitVersionCheck {}`)                                                    |
+| `GitVersionCheckTask.kt`             | Core logic: JGit commit walk → `UpdateType` → semver comparison                                   |
+| `GitCleanCheckTask.kt`               | Standalone task that fails if the worktree is dirty                                               |
+| `ConventionalCommitType.kt`          | Enum mapping commit type strings to their `UpdateType`                                            |
+| `UpdateType.kt`                      | `NOTHING / PATCH / MINOR / MAJOR` enum with regex patterns for commit parsing and fold/bump logic |
+| `PrintVersionTask.kt`                | Prints `project.version` with an optional formatter (for CI pipelines)                            |
+| `hooks/InstallGitHooksTask.kt`       | Installs the git hooks; resolves the hooks directory per `GitHookTarget`                          |
+| `hooks/GitHookTarget.kt`             | Enum `Local / UserGlobal`                                                                         |
+| `hooks/GitHookInstaller.kt`          | Pure file logic: marker detection, skip/update/replace-with-backup                                |
+| `hooks/GitHookTemplates.kt`          | Renders `src/main/resources/git-hooks/*` replacing `@@NAME@@` placeholders                        |
+| `hooks/GitHooksDirectoryResolver.kt` | Resolves `core.hooksPath` for the repository or the user config                                   |
 
 ### How version determination works
 
@@ -76,17 +82,34 @@ check
     └── checkGitCleanIfRequired   (only runs if isCleanWorkingTreeRequired=true)
 
 checkGitClean                     (standalone, not wired into check, intented to be used for publishing gradle task (to avoid publishing dirty states)
+printVersion                      (standalone)
+installGitHooks                   (standalone; installs commit-msg, pre-commit, pre-push)
 ```
+
+### Git hooks
+
+The hook scripts live in `src/main/resources/git-hooks/` as plain bash with `@@MARKER@@`, `@@COMMIT_TYPES@@` and
+`@@MAIN_BRANCH@@` placeholders. `GitHookTemplates` renders them; the commit type alternation is derived from
+`ConventionalCommitType.entries`, so adding a commit type automatically updates the `commit-msg` hook. Every rendered
+hook contains the marker line `# managed-by: io.github.woolph.git-version-check`; `GitHookInstaller` only overwrites
+files carrying that marker (or any file when `force` is set, keeping a `<hook>.backup-<timestamp>` copy).
+
+`GitHookTarget.Local` honors a repository-level `core.hooksPath`, else uses `<gitDir>/hooks`. `GitHookTarget.UserGlobal`
+reads `core.hooksPath` from `<userHome>/.gitconfig`; if unset it uses `~/.git/hooks` and persists that setting. The
+user home is the task property `userHome` (default: system property `user.home`) — tests override it with
+`-Duser.home=<tmp>` so they never touch the developer's real `~/.gitconfig`.
 
 ### Gradle properties recognized at runtime
 
-| Property                | Effect                                                            |
-|-------------------------|-------------------------------------------------------------------|
-| `allowDirtyWorkingTree` | Skips `checkGitCleanIfRequired`                                   |
-| `squashMerge`           | Enables squash mode; target is `refs/remotes/origin/<mainBranch>` |
-| `squashMergeOnto`       | Explicit squash target ref (overrides `squashMerge`)              |
-| `dirtyBump`             | Override dirty-worktree bump type (`PATCH`, `MINOR`, `MAJOR`)     |
-| `dirtySuffix`           | Override dirty prerelease suffix (default `SNAPSHOT`)             |
+| Property                           | Effect                                                            |
+|------------------------------------|-------------------------------------------------------------------|
+| `allowDirtyWorkingTree`            | Skips `checkGitCleanIfRequired`                                   |
+| `squashMerge`                      | Enables squash mode; target is `refs/remotes/origin/<mainBranch>` |
+| `squashMergeOnto`                  | Explicit squash target ref (overrides `squashMerge`)              |
+| `dirtyBump`                        | Override dirty-worktree bump type (`PATCH`, `MINOR`, `MAJOR`)     |
+| `dirtySuffix`                      | Override dirty prerelease suffix (default `SNAPSHOT`)             |
+| `gitVersionCheck.hookTarget`       | `Local` (default) or `UserGlobal` for `installGitHooks`           |
+| `gitVersionCheck.forceHookInstall` | Replace foreign hooks in `installGitHooks` (backup is kept)       |
 
 ## Code Style
 
@@ -102,6 +125,12 @@ Two test strategies exist:
   daemon). Note: `afterEvaluate` blocks are not triggered by `ProjectBuilder`.
 - **`GitVersionCheckPluginTests`** — TestKit functional tests that launch a real Gradle build against temp project
   directories; parameterized over supported Gradle versions (`8.14.5`, `9.5.1`).
+- **`hooks/*Tests`** — plain JUnit tests for the hook installer, directory resolver and templates. The template tests
+  execute the rendered `commit-msg` hook with bash against sample messages, so they need a POSIX environment.
+
+The initial commit created by the TestKit helpers uses a conventional message (`chore: initial commit`), because JGit
+executes `commit-msg` hooks from a user global `core.hooksPath` too, and a developer may have the plugin's hooks
+installed globally.
 
 JaCoCo coverage report is generated automatically after `test` (`finalizedBy jacocoTestReport`).
 

@@ -7,6 +7,16 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased/Upcoming
 
+## [0.2.0] - 2026-09-17
+
+### Added
+
+- `installGitHooks` task which installs client-side git hooks (`commit-msg`, `pre-commit`, `pre-push`) either into the
+  project's repository (`Local`, default) or into the user global hooks directory (`UserGlobal`, configured via
+  `core.hooksPath`). The `commit-msg` hook is generated from the commit types known to the plugin, so both always agree.
+  Hooks not installed by this plugin are never overwritten unless `-PgitVersionCheck.forceHookInstall` is passed (a
+  backup is kept in that case).
+
 ## [0.1.6] - 2026-07-07
 
 ### Changed

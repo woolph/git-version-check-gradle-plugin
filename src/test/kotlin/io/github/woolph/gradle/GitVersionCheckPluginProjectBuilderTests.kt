@@ -17,9 +17,12 @@
 // SPDX-License-Identifier: Apache-2.0
 package io.github.woolph.gradle
 
+import io.github.woolph.gradle.hooks.GitHookTarget
+import io.github.woolph.gradle.hooks.InstallGitHooksTask
 import org.gradle.api.Task
 import org.gradle.testfixtures.ProjectBuilder
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
@@ -59,6 +62,7 @@ class GitVersionCheckPluginProjectBuilderTests {
             "checkGitCleanIfRequired",
             "checkGitClean",
             "printVersion",
+            "installGitHooks",
         )
         .forEach { taskName ->
           assertNotNull(project.tasks.findByName(taskName), "task '$taskName' should be registered")
@@ -115,5 +119,23 @@ class GitVersionCheckPluginProjectBuilderTests {
     )
     assertEquals("main", gitVersionCheck.mainBranch.get())
     assertTrue(gitVersionCheck.isCleanWorkingTreeRequired.get())
+  }
+
+  @Test
+  fun `installGitHooks defaults to local target without force and is never up to date`() {
+    val installGitHooks = project.tasks.getByName("installGitHooks") as InstallGitHooksTask
+
+    assertEquals(GitHookTarget.Local, installGitHooks.target.get())
+    assertFalse(installGitHooks.force.get())
+    assertEquals("main", installGitHooks.mainBranch.get())
+    assertEquals(
+        project.layout.projectDirectory.dir(".git").asFile,
+        installGitHooks.gitDirectory.get().asFile,
+    )
+    assertEquals(
+        java.io.File(System.getProperty("user.home")),
+        installGitHooks.userHome.get().asFile,
+    )
+    assertFalse(installGitHooks.outputs.upToDateSpec.isSatisfiedBy(installGitHooks))
   }
 }

@@ -30,6 +30,7 @@ check
     └── checkGitCleanIfRequired (checks whether the git worktree is clean if a dirty worktree is disallow, which is the case by default)
 checkGitClean                   (checks whether the git worktree is clean)
 printVersion                    (prints the currently set verison)
+installGitHooks                 (installs client-side git hooks matching the plugin's commit message rules)
 ```
 
 ## Configuration
@@ -42,6 +43,36 @@ gitVersionCheck {
   mainBranch = "maestro"
 }
 ```
+
+## Git hooks
+
+`installGitHooks` installs three client-side hooks so that problems are caught before the CI does:
+
+| Hook         | Purpose                                                                                                                                                 |
+|--------------|---------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `commit-msg` | Rejects commit messages which are not conventional commits. The accepted commit types are generated from the plugin, so hook and check always agree.   |
+| `pre-commit` | Runs `./gradlew spotlessCheck` on the staged changes (skipped if the repository has no gradle wrapper or no `spotlessCheck` task).                     |
+| `pre-push`   | Runs `./gradlew checkGitVersion` (with `-PsquashMerge` on feature branches; skipped if the repository has no gradle wrapper or the plugin is not applied). |
+
+```bash
+# install into .git/hooks of this repository (default)
+./gradlew installGitHooks
+
+# install into the user global hooks directory (core.hooksPath of your user git config;
+# if not configured yet, ~/.git/hooks is used and core.hooksPath is set accordingly)
+./gradlew installGitHooks -PgitVersionCheck.hookTarget=UserGlobal
+
+# replace existing hooks which were not installed by this plugin (a backup is kept next to them)
+./gradlew installGitHooks -PgitVersionCheck.forceHookInstall
+```
+
+Hooks installed by this task contain a marker line and are updated on every run. Hooks without that marker are left
+untouched (and reported) unless `-PgitVersionCheck.forceHookInstall` is passed. The target can also be set in the build
+script via `tasks.installGitHooks { target = GitHookTarget.UserGlobal }`.
+
+> [!NOTE]
+> If your user git config sets `core.hooksPath`, git ignores hooks inside `.git/hooks`. The task warns about this
+> when installing with the `Local` target.
 
 ## Prerequisites
 

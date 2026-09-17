@@ -17,6 +17,8 @@
 // SPDX-License-Identifier: Apache-2.0
 package io.github.woolph.gradle
 
+import io.github.woolph.gradle.hooks.GitHookTarget
+import io.github.woolph.gradle.hooks.InstallGitHooksTask
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.kotlin.dsl.create
@@ -74,9 +76,31 @@ class GitVersionCheckPlugin : Plugin<Project> {
 
       tasks.register<PrintVersionTask>("printVersion")
 
+      registerInstallGitHooks(gitVersionCheckExtension)
+
       tasks.named("check") {
         dependsOn(checkGitVersion)
       }
+    }
+  }
+
+  private fun Project.registerInstallGitHooks(extension: GitVersionCheckExtension) {
+    tasks.register<InstallGitHooksTask>("installGitHooks") {
+      gitDirectory.set(extension.gitDirectory)
+      mainBranch.set(extension.mainBranch)
+
+      target.convention(
+          providers
+              .gradleProperty("gitVersionCheck.hookTarget")
+              .map(GitHookTarget::of)
+              .orElse(GitHookTarget.Local)
+      )
+      force.convention(
+          providers
+              .gradleProperty("gitVersionCheck.forceHookInstall")
+              .map { it.isEmpty() || it.toBoolean() }
+              .orElse(false)
+      )
     }
   }
 }

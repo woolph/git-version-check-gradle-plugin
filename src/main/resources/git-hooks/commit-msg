@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+@@MARKER@@
+#
+# Validates that the commit message adheres to Conventional Commits 1.0.0
+# (https://www.conventionalcommits.org/en/v1.0.0/) using the same rules as the
+# io.github.woolph.git-version-check gradle plugin applies when determining the version.
+#
+# Installed by the gradle task `installGitHooks`; re-running that task updates this file.
+
+COMMIT_MSG_FILE="$1"
+
+# merge commits are ignored by the plugin, so they are not validated here either
+if git rev-parse -q --verify MERGE_HEAD >/dev/null 2>&1; then
+  exit 0
+fi
+
+# the first line which is neither empty nor a comment
+FIRST_LINE=$(grep -v -m1 -E '^(#|[[:space:]]*$)' "$COMMIT_MSG_FILE")
+
+TYPES="@@COMMIT_TYPES@@"
+PATTERN="^(${TYPES})(\([A-Za-z0-9_]+\))?(!)?: .+$"
+
+# the plugin matches the commit type case-insensitively
+shopt -s nocasematch
+if ! [[ "$FIRST_LINE" =~ $PATTERN ]]; then
+  echo "[git hook] bad commit message: '$FIRST_LINE'" >&2
+  echo "[git hook] expected a conventional commit (https://www.conventionalcommits.org/en/v1.0.0/), e.g. 'feat(scope)!: description'" >&2
+  echo "[git hook] allowed types: ${TYPES//|/, }" >&2
+  exit 1
+fi
+IS_BREAKING="${BASH_REMATCH[3]}"
+shopt -u nocasematch
+
+if [[ -z "$IS_BREAKING" ]] && grep -q -E '^BREAKING CHANGE:' "$COMMIT_MSG_FILE"; then
+  echo "[git hook] bad commit message: it contains a 'BREAKING CHANGE:' footer, but the first line does not mark the breaking change with '!'" >&2
+  echo "[git hook] see https://www.conventionalcommits.org/en/v1.0.0/" >&2
+  exit 1
+fi
+
+exit 0
