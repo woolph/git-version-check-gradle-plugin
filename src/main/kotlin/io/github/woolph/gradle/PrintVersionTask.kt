@@ -23,7 +23,9 @@ import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.TaskAction
 import org.gradle.work.DisableCachingByDefault
 
-@DisableCachingByDefault(because = "This tasks main purpose is printing information to stdout for CI pipelines")
+@DisableCachingByDefault(
+    because = "This tasks main purpose is printing information to stdout for CI pipelines"
+)
 abstract class PrintVersionTask : DefaultTask() {
   @get:Input private val version = project.version.toString()
 
@@ -33,13 +35,17 @@ abstract class PrintVersionTask : DefaultTask() {
     group = "other"
     description = "prints the version with the given formatter"
 
-    versionFormatter.convention(
-        project.providers.gradleProperty("projectVersionFormatter").orElse("%s")
-    )
+    versionFormatter.convention("%s")
   }
 
   @TaskAction
   fun printVersion() {
-    println(versionFormatter.map { it.format(version) }.get())
+    println(
+        project.providers
+            .gradleProperty("projectVersionFormatter")
+            .orElse(versionFormatter)
+            .map { it.format(version) }
+            .get()
+    )
   }
 }

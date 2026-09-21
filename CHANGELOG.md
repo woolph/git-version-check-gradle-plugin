@@ -7,6 +7,12 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased/Upcoming
 
+## [0.2.2] - 2026-09-21
+
+### Fixed
+
+- `printVersion` tasks versionFormatter property is now overridable with gradle properties
+
 ## [0.2.1] - 2026-09-21
 
 ### Fixed

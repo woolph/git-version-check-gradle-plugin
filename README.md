@@ -14,7 +14,7 @@ Add the plugin to your Gradle build:
 
 ```kotlin
 plugins {
-  id("io.github.woolph.git-version-check") version "0.2.0"
+  id("io.github.woolph.git-version-check") version "0.2.2"
 }
 ```
 

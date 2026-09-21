@@ -16,4 +16,4 @@ test-mockk = { module = "io.mockk:mockk", version = "1.14.11" }
 pluginPublish = "com.gradle.plugin-publish:2.1.1"
 spotless = "com.diffplug.spotless:8.7.0"
 detekt = "dev.detekt:2.0.0-alpha.5"
-gitVersionCheck = "io.github.woolph.git-version-check:0.1.6"
+gitVersionCheck = "io.github.woolph.git-version-check:0.2.1"
