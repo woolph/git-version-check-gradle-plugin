@@ -41,40 +41,16 @@ import org.junit.jupiter.api.TestFactory
 
 class GitVersionCheckPluginTests {
   @TestFactory
-  fun `project without check task fails`() =
-      runTestWithGradleRunner(
-          setup = {
-            settingsFile.writeText("rootProject.name = \"test-project\"")
-            buildFile.writeText(
-                """
-                plugins {
-                    id("io.github.woolph.git-version-check")
-                }
-                """
-                    .trimIndent(),
-            )
-          }
-      ) {
-        val result = gradleRunner.withArguments("build").buildAndFail()
-
-        assertTrue(
-            result.output.contains(
-                "Task with name 'check' not found in root project 'test-project'."
-            )
-        )
-      }
-
-  @TestFactory
   fun `project without git repo fails`() =
       runTestWithGradleRunner(
           setup = {
             setupProject("0.1.0")
           }
       ) {
-        val result = gradleRunner.withArguments("check").buildAndFail()
+        val result = gradleRunner.withArguments("preCommitCheck").buildAndFail()
 
         assertEquals(TaskOutcome.FAILED, result.task(":checkGitCleanIfRequired")?.outcome)
-        assertEquals(null, result.task(":check")?.outcome)
+        assertEquals(null, result.task(":preCommitCheck")?.outcome)
       }
 
   @TestFactory
@@ -84,11 +60,11 @@ class GitVersionCheckPluginTests {
             setupProjectWithGitRepo("0.1.0")
           }
       ) {
-        val result = gradleRunner.withArguments("check").build()
+        val result = gradleRunner.withArguments("preCommitCheck").build()
 
         assertEquals(TaskOutcome.SUCCESS, result.task(":checkGitCleanIfRequired")?.outcome)
         assertEquals(TaskOutcome.SUCCESS, result.task(":checkGitVersion")?.outcome)
-        assertEquals(TaskOutcome.SUCCESS, result.task(":check")?.outcome)
+        assertEquals(TaskOutcome.SUCCESS, result.task(":preCommitCheck")?.outcome)
       }
 
   @TestFactory
@@ -98,7 +74,7 @@ class GitVersionCheckPluginTests {
             setupProjectWithGitRepo("0.2.0")
           }
       ) {
-        val result = gradleRunner.withArguments("check").buildAndFail()
+        val result = gradleRunner.withArguments("preCommitCheck").buildAndFail()
 
         assertEquals(TaskOutcome.SUCCESS, result.task(":checkGitCleanIfRequired")?.outcome)
         assertEquals(TaskOutcome.FAILED, result.task(":checkGitVersion")?.outcome)
@@ -113,7 +89,7 @@ class GitVersionCheckPluginTests {
             projectDir.resolve("new.txt").writeText("test content\n")
           }
       ) {
-        val result = gradleRunner.withArguments("check").buildAndFail()
+        val result = gradleRunner.withArguments("preCommitCheck").buildAndFail()
 
         assertEquals(TaskOutcome.FAILED, result.task(":checkGitCleanIfRequired")?.outcome)
       }
@@ -128,11 +104,13 @@ class GitVersionCheckPluginTests {
           }
       ) {
         val result =
-            gradleRunner.withArguments("check", "-PallowDirtyWorkingTree", "--stacktrace").build()
+            gradleRunner
+                .withArguments("preCommitCheck", "-PallowDirtyWorkingTree", "--stacktrace")
+                .build()
 
         assertEquals(TaskOutcome.SKIPPED, result.task(":checkGitCleanIfRequired")?.outcome)
         assertEquals(TaskOutcome.SUCCESS, result.task(":checkGitVersion")?.outcome)
-        assertEquals(TaskOutcome.SUCCESS, result.task(":check")?.outcome)
+        assertEquals(TaskOutcome.SUCCESS, result.task(":preCommitCheck")?.outcome)
       }
 
   @TestFactory
@@ -146,12 +124,12 @@ class GitVersionCheckPluginTests {
       ) {
         val result =
             gradleRunner
-                .withArguments("check", "-PallowDirtyWorkingTree", "-PdirtyBump=minor")
+                .withArguments("preCommitCheck", "-PallowDirtyWorkingTree", "-PdirtyBump=minor")
                 .build()
 
         assertEquals(TaskOutcome.SKIPPED, result.task(":checkGitCleanIfRequired")?.outcome)
         assertEquals(TaskOutcome.SUCCESS, result.task(":checkGitVersion")?.outcome)
-        assertEquals(TaskOutcome.SUCCESS, result.task(":check")?.outcome)
+        assertEquals(TaskOutcome.SUCCESS, result.task(":preCommitCheck")?.outcome)
       }
 
   @TestFactory
@@ -165,12 +143,12 @@ class GitVersionCheckPluginTests {
       ) {
         val result =
             gradleRunner
-                .withArguments("check", "-PallowDirtyWorkingTree", "-PdirtyBump=patch")
+                .withArguments("preCommitCheck", "-PallowDirtyWorkingTree", "-PdirtyBump=patch")
                 .build()
 
         assertEquals(TaskOutcome.SKIPPED, result.task(":checkGitCleanIfRequired")?.outcome)
         assertEquals(TaskOutcome.SUCCESS, result.task(":checkGitVersion")?.outcome)
-        assertEquals(TaskOutcome.SUCCESS, result.task(":check")?.outcome)
+        assertEquals(TaskOutcome.SUCCESS, result.task(":preCommitCheck")?.outcome)
       }
 
   @TestFactory
@@ -184,12 +162,12 @@ class GitVersionCheckPluginTests {
       ) {
         val result =
             gradleRunner
-                .withArguments("check", "-PallowDirtyWorkingTree", "-PdirtyBump=nothing")
+                .withArguments("preCommitCheck", "-PallowDirtyWorkingTree", "-PdirtyBump=nothing")
                 .build()
 
         assertEquals(TaskOutcome.SKIPPED, result.task(":checkGitCleanIfRequired")?.outcome)
         assertEquals(TaskOutcome.SUCCESS, result.task(":checkGitVersion")?.outcome)
-        assertEquals(TaskOutcome.SUCCESS, result.task(":check")?.outcome)
+        assertEquals(TaskOutcome.SUCCESS, result.task(":preCommitCheck")?.outcome)
       }
 
   @TestFactory
@@ -204,7 +182,7 @@ class GitVersionCheckPluginTests {
         val result =
             gradleRunner
                 .withArguments(
-                    "check",
+                    "preCommitCheck",
                     "-PallowDirtyWorkingTree",
                     "-PdirtyBump=major",
                     "-PdirtySuffix=beta",
@@ -213,7 +191,7 @@ class GitVersionCheckPluginTests {
 
         assertEquals(TaskOutcome.SKIPPED, result.task(":checkGitCleanIfRequired")?.outcome)
         assertEquals(TaskOutcome.SUCCESS, result.task(":checkGitVersion")?.outcome)
-        assertEquals(TaskOutcome.SUCCESS, result.task(":check")?.outcome)
+        assertEquals(TaskOutcome.SUCCESS, result.task(":preCommitCheck")?.outcome)
       }
 
   @TestFactory
@@ -231,11 +209,11 @@ class GitVersionCheckPluginTests {
                 .call()
           }
       ) {
-        val result = gradleRunner.withArguments("check").build()
+        val result = gradleRunner.withArguments("preCommitCheck").build()
 
         assertEquals(TaskOutcome.SUCCESS, result.task(":checkGitCleanIfRequired")?.outcome)
         assertEquals(TaskOutcome.SUCCESS, result.task(":checkGitVersion")?.outcome)
-        assertEquals(TaskOutcome.SUCCESS, result.task(":check")?.outcome)
+        assertEquals(TaskOutcome.SUCCESS, result.task(":preCommitCheck")?.outcome)
       }
 
   @TestFactory
@@ -253,11 +231,11 @@ class GitVersionCheckPluginTests {
                 .call()
           }
       ) {
-        val result = gradleRunner.withArguments("check").build()
+        val result = gradleRunner.withArguments("preCommitCheck").build()
 
         assertEquals(TaskOutcome.SUCCESS, result.task(":checkGitCleanIfRequired")?.outcome)
         assertEquals(TaskOutcome.SUCCESS, result.task(":checkGitVersion")?.outcome)
-        assertEquals(TaskOutcome.SUCCESS, result.task(":check")?.outcome)
+        assertEquals(TaskOutcome.SUCCESS, result.task(":preCommitCheck")?.outcome)
       }
 
   @TestFactory
@@ -282,11 +260,11 @@ class GitVersionCheckPluginTests {
                 .call()
           }
       ) {
-        val result = gradleRunner.withArguments("check").build()
+        val result = gradleRunner.withArguments("preCommitCheck").build()
 
         assertEquals(TaskOutcome.SUCCESS, result.task(":checkGitCleanIfRequired")?.outcome)
         assertEquals(TaskOutcome.SUCCESS, result.task(":checkGitVersion")?.outcome)
-        assertEquals(TaskOutcome.SUCCESS, result.task(":check")?.outcome)
+        assertEquals(TaskOutcome.SUCCESS, result.task(":preCommitCheck")?.outcome)
       }
 
   @TestFactory
@@ -322,7 +300,7 @@ class GitVersionCheckPluginTests {
                 .call()
           }
       ) {
-        val result = gradleRunner.withArguments("check").buildAndFail()
+        val result = gradleRunner.withArguments("preCommitCheck").buildAndFail()
 
         assertEquals(TaskOutcome.SUCCESS, result.task(":checkGitCleanIfRequired")?.outcome)
         assertEquals(TaskOutcome.FAILED, result.task(":checkGitVersion")?.outcome)
@@ -343,11 +321,11 @@ class GitVersionCheckPluginTests {
                 .call()
           }
       ) {
-        val result = gradleRunner.withArguments("check").build()
+        val result = gradleRunner.withArguments("preCommitCheck").build()
 
         assertEquals(TaskOutcome.SUCCESS, result.task(":checkGitCleanIfRequired")?.outcome)
         assertEquals(TaskOutcome.SUCCESS, result.task(":checkGitVersion")?.outcome)
-        assertEquals(TaskOutcome.SUCCESS, result.task(":check")?.outcome)
+        assertEquals(TaskOutcome.SUCCESS, result.task(":preCommitCheck")?.outcome)
       }
 
   @TestFactory
@@ -365,7 +343,7 @@ class GitVersionCheckPluginTests {
                 .call()
           }
       ) {
-        val result = gradleRunner.withArguments("check").buildAndFail()
+        val result = gradleRunner.withArguments("preCommitCheck").buildAndFail()
 
         println(result.output)
         assertEquals(TaskOutcome.SUCCESS, result.task(":checkGitCleanIfRequired")?.outcome)
@@ -389,13 +367,13 @@ class GitVersionCheckPluginTests {
       ) {
         val result =
             gradleRunner
-                .withArguments("check", "-PgitVersionCheck.unconventionalCommitBump=minor")
+                .withArguments("preCommitCheck", "-PgitVersionCheck.unconventionalCommitBump=minor")
                 .build()
 
         println(result.output)
         assertEquals(TaskOutcome.SUCCESS, result.task(":checkGitCleanIfRequired")?.outcome)
         assertEquals(TaskOutcome.SUCCESS, result.task(":checkGitVersion")?.outcome)
-        assertEquals(TaskOutcome.SUCCESS, result.task(":check")?.outcome)
+        assertEquals(TaskOutcome.SUCCESS, result.task(":preCommitCheck")?.outcome)
       }
 
   @TestFactory
@@ -432,13 +410,13 @@ class GitVersionCheckPluginTests {
                             "patch",
                     )
                 )
-                .withArguments("check", "-PgitVersionCheck.unconventionalCommitBump=minor")
+                .withArguments("preCommitCheck", "-PgitVersionCheck.unconventionalCommitBump=minor")
                 .build()
 
         println(result.output)
         assertEquals(TaskOutcome.SUCCESS, result.task(":checkGitCleanIfRequired")?.outcome)
         assertEquals(TaskOutcome.SUCCESS, result.task(":checkGitVersion")?.outcome)
-        assertEquals(TaskOutcome.SUCCESS, result.task(":check")?.outcome)
+        assertEquals(TaskOutcome.SUCCESS, result.task(":preCommitCheck")?.outcome)
       }
 
   @TestFactory
@@ -474,13 +452,13 @@ class GitVersionCheckPluginTests {
                         "ORG_GRADLE_PROJECT_gitVersionCheck.unconventionalCommitBump" to "patch",
                     )
                 )
-                .withArguments("check")
+                .withArguments("preCommitCheck")
                 .build()
 
         println(result.output)
         assertEquals(TaskOutcome.SUCCESS, result.task(":checkGitCleanIfRequired")?.outcome)
         assertEquals(TaskOutcome.SUCCESS, result.task(":checkGitVersion")?.outcome)
-        assertEquals(TaskOutcome.SUCCESS, result.task(":check")?.outcome)
+        assertEquals(TaskOutcome.SUCCESS, result.task(":preCommitCheck")?.outcome)
       }
 
   @TestFactory
@@ -509,12 +487,12 @@ class GitVersionCheckPluginTests {
                 .call()
           }
       ) {
-        val result = gradleRunner.withArguments("check").build()
+        val result = gradleRunner.withArguments("preCommitCheck").build()
 
         println(result.output)
         assertEquals(TaskOutcome.SUCCESS, result.task(":checkGitCleanIfRequired")?.outcome)
         assertEquals(TaskOutcome.SUCCESS, result.task(":checkGitVersion")?.outcome)
-        assertEquals(TaskOutcome.SUCCESS, result.task(":check")?.outcome)
+        assertEquals(TaskOutcome.SUCCESS, result.task(":preCommitCheck")?.outcome)
       }
 
   // TODO do more tests with baselineCommit & baselineTagPattern

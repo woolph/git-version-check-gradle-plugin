@@ -56,7 +56,7 @@ abstract class InstallGitHooksTask : DefaultTask() {
   @get:Input abstract val mainBranch: Property<String>
 
   /** the git directory of the project, only used for [GitHookTarget.Local] */
-  @get:Internal abstract val gitDirectory: DirectoryProperty
+  @get:Internal abstract val gitDirectory: Property<File>
 
   /**
    * the user's home directory containing the `.gitconfig` (default: system property `user.home`),
@@ -73,7 +73,7 @@ abstract class InstallGitHooksTask : DefaultTask() {
     target.convention(GitHookTarget.Local)
     force.convention(false)
     mainBranch.convention("main")
-    gitDirectory.convention(project.layout.projectDirectory.dir(".git"))
+    gitDirectory.convention(project.layout.projectDirectory.dir(".git").asFile)
     userHome.convention(
         project.layout.dir(project.providers.systemProperty("user.home").map(::File))
     )
@@ -120,7 +120,7 @@ abstract class InstallGitHooksTask : DefaultTask() {
   private fun resolveHooksDirectory(): Path =
       when (target.get()) {
         GitHookTarget.Local -> {
-          val gitDir = gitDirectory.get().asFile.toPath()
+          val gitDir = gitDirectory.get().toPath()
           if (!gitDir.isDirectory()) {
             throw InvalidUserDataException("git directory $gitDir does not exist")
           }

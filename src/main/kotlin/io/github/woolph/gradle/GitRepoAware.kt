@@ -17,19 +17,30 @@
 // SPDX-License-Identifier: Apache-2.0
 package io.github.woolph.gradle
 
+import java.io.File
 import kotlin.use
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder
 import org.gradle.api.GradleException
-import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.provider.Property
 
 interface GitRepoAware {
-  val gitDirectory: DirectoryProperty
+  val gitDirectory: Property<File>
 
   @Suppress("detekt:TooGenericExceptionCaught")
   fun <R> useGitRepo(block: (Git) -> R): R =
       try {
-        FileRepositoryBuilder().setGitDir(gitDirectory.get().asFile).build().use { repository ->
+        val file = gitDirectory.get()
+        val actualDirectory =
+            when {
+              file.isDirectory -> file
+              file.isFile -> File(file.readLines(Charsets.UTF_8).first().removePrefix("gitdir: "))
+              else ->
+                  throw IllegalStateException(
+                      "$file does not exist (or it is neither directory nor a file"
+                  )
+            }
+        FileRepositoryBuilder().setGitDir(actualDirectory).build().use { repository ->
           Git(repository).use { git ->
             block(git)
           }

@@ -1,7 +1,7 @@
 # git-version-check-gradle-plugin
 
-[![Gradle plugin](https://img.shields.io/badge/plugins.gradle.org-io.github.woolph.git-version--check-blue.svg)](https://plugins.gradle.org/plugin/io.github.woolph.git-version-check)
-[![Changelog](https://img.shields.io/badge/changelog-0.1.0-blue.svg)](CHANGELOG.md)
+[![Gradle plugin](https://img.shields.io/badge/plugins.gradle.org-io.github.woolph.git--version--check-blue.svg)](https://plugins.gradle.org/plugin/io.github.woolph.git-version-check)
+[![Changelog](https://img.shields.io/badge/changelog-0.2.0-blue.svg)](CHANGELOG.md)
 
 `git-version-check` is a Gradle plugin that uses the git commit history to determine the version by looking for
 ['conventional commits'](https://www.conventionalcommits.org/en/v1.0.0/)-based commit messages and checks whether
@@ -14,7 +14,7 @@ Add the plugin to your Gradle build:
 
 ```kotlin
 plugins {
-  id("io.github.woolph.git-version-check") version "0.1.6"
+  id("io.github.woolph.git-version-check") version "0.2.0"
 }
 ```
 

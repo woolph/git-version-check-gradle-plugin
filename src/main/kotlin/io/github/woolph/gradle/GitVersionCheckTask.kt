@@ -17,6 +17,7 @@
 // SPDX-License-Identifier: Apache-2.0
 package io.github.woolph.gradle
 
+import java.io.File
 import kotlin.use
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.api.errors.GitAPIException
@@ -27,14 +28,10 @@ import org.eclipse.jgit.revwalk.RevWalk
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
 import org.gradle.api.InvalidUserDataException
-import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.Input
-import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.Optional
-import org.gradle.api.tasks.PathSensitive
-import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.VerificationException
 import org.gradle.work.DisableCachingByDefault
@@ -85,9 +82,7 @@ abstract class GitVersionCheckTask : DefaultTask(), GitRepoAware {
   @get:Input @get:Optional abstract val squashMergeTarget: Property<String>
 
   /** determines where the git repository data resides */
-  @get:InputDirectory
-  @get:PathSensitive(PathSensitivity.RELATIVE)
-  abstract override val gitDirectory: DirectoryProperty
+  @get:Input abstract override val gitDirectory: Property<File>
 
   init {
     group = "verification"
@@ -95,7 +90,7 @@ abstract class GitVersionCheckTask : DefaultTask(), GitRepoAware {
 
     initialVersion.convention("0.1.0")
     baselineTagPattern.convention("v*")
-    gitDirectory.convention(project.layout.projectDirectory.dir(".git"))
+    gitDirectory.convention(project.layout.projectDirectory.dir(".git").asFile)
     baselineTagConsiderUnannotated.convention(false)
     ignoreMergeCommits.convention(true)
 

@@ -78,7 +78,7 @@ class GitVersionCheckPlugin : Plugin<Project> {
 
       registerInstallGitHooks(gitVersionCheckExtension)
 
-      tasks.named("check") {
+      tasks.register("preCommitCheck") {
         dependsOn(checkGitVersion)
       }
     }

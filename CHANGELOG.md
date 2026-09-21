@@ -7,6 +7,13 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased/Upcoming
 
+## [0.2.1] - 2026-09-21
+
+### Fixed
+
+- made git worktree repo directories also work (worktree repos do not contain a `.git` directory, but a `.git` file
+  containing the path to the actual git directory)
+
 ## [0.2.0] - 2026-09-17
 
 ### Added
@@ -16,6 +23,13 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `core.hooksPath`). The `commit-msg` hook is generated from the commit types known to the plugin, so both always agree.
   Hooks not installed by this plugin are never overwritten unless `-PgitVersionCheck.forceHookInstall` is passed (a
   backup is kept in that case).
+
+### Changed
+
+- `checkGitVersion` is no longer wired up to be a "child" of the `check` task, because on PR pipeline runs it 
+  cannot run safely due to the issue with the shallow cloning ("unshallowing" does not work on Azure DevOps so good,
+  because even when the git repo is "unshallowed", the indicator for shallow repo is still true, tricking the plugin
+  to believe it works with a shallow repo)
 
 ## [0.1.6] - 2026-07-07
 

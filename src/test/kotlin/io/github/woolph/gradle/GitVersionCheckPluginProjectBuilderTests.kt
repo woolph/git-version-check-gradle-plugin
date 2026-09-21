@@ -70,15 +70,15 @@ class GitVersionCheckPluginProjectBuilderTests {
   }
 
   @Test
-  fun `check task depends on checkGitVersion`() {
-    val check = project.tasks.getByName("check")
+  fun `preCommitCheck task depends on checkGitVersion`() {
+    val preCommitCheck = project.tasks.getByName("preCommitCheck")
 
     val checkDependencyNames =
-        check.taskDependencies.getDependencies(check).map(Task::getName).toSet()
+        preCommitCheck.taskDependencies.getDependencies(preCommitCheck).map(Task::getName).toSet()
 
     assertTrue(
         checkDependencyNames.contains("checkGitVersion"),
-        "check should depend on checkGitVersion, but depends on $checkDependencyNames",
+        "preCommitCheck should depend on checkGitVersion, but depends on $checkDependencyNames",
     )
   }
 
@@ -104,7 +104,7 @@ class GitVersionCheckPluginProjectBuilderTests {
 
     assertTrue(
         dependencyNames.isEmpty(),
-        "printVersion should depend on any other task, but depends on $dependencyNames",
+        "printVersion should not depend on any other task, but depends on $dependencyNames",
     )
   }
 
@@ -115,7 +115,7 @@ class GitVersionCheckPluginProjectBuilderTests {
 
     assertEquals(
         project.layout.projectDirectory.file(".git").asFile,
-        gitVersionCheck.gitDirectory.get().asFile,
+        gitVersionCheck.gitDirectory.get(),
     )
     assertEquals("main", gitVersionCheck.mainBranch.get())
     assertTrue(gitVersionCheck.isCleanWorkingTreeRequired.get())
@@ -130,7 +130,7 @@ class GitVersionCheckPluginProjectBuilderTests {
     assertEquals("main", installGitHooks.mainBranch.get())
     assertEquals(
         project.layout.projectDirectory.dir(".git").asFile,
-        installGitHooks.gitDirectory.get().asFile,
+        installGitHooks.gitDirectory.get(),
     )
     assertEquals(
         java.io.File(System.getProperty("user.home")),

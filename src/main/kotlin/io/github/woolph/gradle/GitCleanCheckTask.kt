@@ -17,12 +17,11 @@
 // SPDX-License-Identifier: Apache-2.0
 package io.github.woolph.gradle
 
+import java.io.File
 import org.eclipse.jgit.api.Status
 import org.gradle.api.DefaultTask
-import org.gradle.api.file.DirectoryProperty
-import org.gradle.api.tasks.InputDirectory
-import org.gradle.api.tasks.PathSensitive
-import org.gradle.api.tasks.PathSensitivity
+import org.gradle.api.provider.Property
+import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.VerificationException
 import org.gradle.work.DisableCachingByDefault
@@ -33,12 +32,10 @@ abstract class GitCleanCheckTask : DefaultTask(), GitRepoAware {
     group = "verification"
     description =
         "Checks whether the worktree is clean, otherwise it fails the build. This can be used before publishing an artifact to ensure the checkGitVersion is correct."
-    gitDirectory.convention(project.layout.projectDirectory.dir(".git"))
+    gitDirectory.convention(project.layout.projectDirectory.dir(".git").asFile)
   }
 
-  @get:InputDirectory
-  @get:PathSensitive(PathSensitivity.RELATIVE)
-  abstract override val gitDirectory: DirectoryProperty
+  @get:Input abstract override val gitDirectory: Property<File>
 
   @TaskAction
   fun checkGitClean() {

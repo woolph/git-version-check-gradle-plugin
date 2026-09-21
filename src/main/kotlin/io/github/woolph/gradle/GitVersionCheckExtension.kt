@@ -17,13 +17,16 @@
 // SPDX-License-Identifier: Apache-2.0
 package io.github.woolph.gradle
 
+import java.io.File
 import javax.inject.Inject
 import org.gradle.api.Project
 import org.gradle.kotlin.dsl.property
 
 abstract class GitVersionCheckExtension @Inject constructor(project: Project) {
   val gitDirectory =
-      project.objects.directoryProperty().convention(project.layout.projectDirectory.dir(".git"))
+      project.objects
+          .property<File>()
+          .convention(project.layout.projectDirectory.dir(".git").asFile)
 
   val mainBranch = project.objects.property<String>().convention("main")
 
